@@ -1,0 +1,15 @@
+.TableContent {
+  display: flex;
+  justify-content: space-around;
+  position: relative;
+}
+
+.NumbersContainer {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.AlignRight {
+  text-align: right;
+}

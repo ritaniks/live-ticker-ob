@@ -1,0 +1,33 @@
+@import "../../config/variables.module.scss";
+
+.Wrapper {
+  margin: 0;
+  height: 32px;
+  line-height: 28px;
+  display: flex;
+  flex-direction: row;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+  padding: 0 0 0 5px;
+  border-bottom: 1px solid rgba(100, 100, 100, 0.3);
+}
+
+.Title {
+  text-transform: uppercase;
+  line-height: 20px;
+  margin-right: $spacer-xs;
+  font-size: 0.9rem;
+}
+
+.CurrencyTitle {
+  composes: Title;
+  color: var(--color-secondary);
+}
+
+.HeaderControls {
+  margin: 0 $spacer-s;
+}

@@ -1,0 +1,82 @@
+@import "../../config/variables.module.scss";
+
+.Wrapper {
+  width: 720px;
+  min-height: 400px;
+  color: white;
+  background-color: var(--color-primary);
+  border: 1px solid var(--border-color-dark);
+}
+
+.CollapsibleBody {
+  padding: $spacer-s $spacer-xs;
+}
+
+.Main {
+  display: flex;
+  text-align: right;
+}
+
+.Bids {
+  width: 50%;
+  font-size: 11px;
+  flex: 1 1;
+  min-width: 270px;
+  margin-right: $spacer-m;
+}
+
+.Asks {
+  width: 50%;
+  font-size: 11px;
+  flex: 1 1;
+  min-width: 270px;
+  margin-left: $spacer-m;
+}
+
+.TitleHeader {
+  display: flex;
+  justify-content: space-between;
+  color: var(--color-secondary);
+  text-transform: uppercase;
+  width: 100%;
+}
+
+.BidsBody {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  width: 100%;
+  text-align: right;
+}
+
+.OrderContainer {
+  line-height: 2.5;
+  display: flex;
+  width: 100%;
+  padding: $spacer-s $spacer-m;
+}
+
+.TableContent {
+  display: flex;
+  flex-direction: column;
+  align-items: baseline;
+  font-size: 11px;
+  width: 100%;
+  text-align: center;
+  padding: 0 8px;
+}
+
+.ColumnStyle {
+  text-align: right;
+  padding-right: 56px;
+}
+
+span {
+  z-index: 2;
+  min-width: 83px;
+}
+
+.AlignRight {
+  text-align: right;
+}
