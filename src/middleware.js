@@ -1,5 +1,5 @@
 import { createListenerMiddleware, isAnyOf } from "@reduxjs/toolkit";
-import { addBids, addAsks } from "../silce/orderbookSlice";
+import { addBids, addAsks } from "./silce/orderbookSlice";
 
 export const listenerMiddleware = createListenerMiddleware();
 

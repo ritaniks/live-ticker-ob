@@ -1,4 +1,4 @@
-import Widget from "../Widget/Widget";
+import Widget from "./components/Widget/Widget";
 import styles from "./App.module.scss";
 
 function App() {
