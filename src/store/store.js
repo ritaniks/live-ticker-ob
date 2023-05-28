@@ -1,7 +1,7 @@
 import { configureStore } from "@reduxjs/toolkit";
 
 import { listenerMiddleware } from "./middleware";
-import orderbookSlice from "./silce/orderbookSlice";
+import orderbookSlice from "../silce/orderbookSlice";
 
 export const store = configureStore({
   reducer: {
