@@ -1,120 +1,120 @@
 import { createSlice, current } from "@reduxjs/toolkit";
 import { PRICE_LEVELS } from "../config/constant";
 
+// Persisting data in localStorage, even if we refresh the page,
+// the trades of old data is retained
+
+const bidsState =
+  localStorage.getItem("lastBids") !== undefined
+    ? JSON.parse(localStorage.getItem("lastBids"))
+    : null;
+
+const asksState =
+  localStorage.getItem("lastAsks") !== undefined
+    ? JSON.parse(localStorage.getItem("lastAsks"))
+    : null;
+
 const initialState = {
   rawBids: [],
-  bids: [],
-  maxTotalBids: 0,
+  bids: bidsState === null ? [] : bidsState,
   rawAsks: [],
-  asks: [],
-  maxTotalAsks: 0,
+  asks: asksState === null ? [] : asksState,
 };
 
-const removePriceLevel = (price, levels) => {
-  levels.filter((level) => level[0] !== price);
+const updatePriceLevel = (currentLevels, newLvl) => {
+  return currentLevels.map((level) =>
+    level[0] === newLvl[0] ? newLvl : level
+  );
 };
 
-const updatePriceLevel = (updatedLevel, levels) => {
-  return levels.map((level) => {
-    if (level[0] === updatedLevel[0]) {
-      level = updatedLevel;
-    }
-    return level;
-  });
-};
+const levelExists = (currentLevels, newPrice) =>
+  currentLevels.some(([deltaPrice]) => deltaPrice === newPrice);
 
-const levelExists = (deltaLevelPrice, currentLevels) =>
-  currentLevels.some((level) => level[0] === deltaLevelPrice);
-
-const addPriceLevel = (deltaLevel, levels) => {
-  return [...levels, deltaLevel];
-};
-
-const applyDeltas = (currentLevels, orders) => {
+const applyDeltas = (currentLevels, newLvl, switchOrder) => {
   let updatedLevels = currentLevels;
+  const [newPrice, newCount] = newLvl[0];
 
-  orders.forEach((deltaLevel) => {
-    const deltaLevelPrice = deltaLevel[0];
-    const deltaLevelCount = deltaLevel[1];
+  // when count = 0 then you have to delete the price level
+  if (newCount === 0 && currentLevels.length > 0) {
+    updatedLevels = currentLevels.filter(
+      ([deltaPrice]) => deltaPrice !== newPrice
+    );
+    // If the price level doesn't exist in the orderbook
+    // and there are less than 24 levels, add it
+  } else if (
+    !levelExists(updatedLevels, newPrice) &&
+    updatedLevels.length < PRICE_LEVELS
+  ) {
+    updatedLevels = [...updatedLevels, newLvl[0]];
 
-    // when count = 0 then you have to delete the price level
-    if (deltaLevelCount === 0 && updatedLevels.length > PRICE_LEVELS) {
-      updatedLevels = removePriceLevel(deltaLevelPrice, updatedLevels);
-    } else {
-      // If the price level exists and the count is not zero, update it
-      if (levelExists(deltaLevelPrice, currentLevels)) {
-        updatedLevels = updatePriceLevel(deltaLevel, updatedLevels);
-      } else {
-        // If the price level doesn't exist in the orderbook and there are less than 24 levels, add it
-        if (updatedLevels.length < PRICE_LEVELS) {
-          updatedLevels = addPriceLevel(deltaLevel, updatedLevels);
-        }
-      }
-    }
-  });
+    // If the price level exists and the count is not zero, update it
+  } else if (levelExists(updatedLevels, newPrice)) {
+    updatedLevels = updatePriceLevel(currentLevels, newLvl);
+  }
 
-  return updatedLevels;
+  const sortedByPrice = [...updatedLevels].sort((curr, next) =>
+    switchOrder ? next[0] - curr[0] : curr[0] - next[0]
+  );
+
+  return addTotalSums(sortedByPrice);
 };
 
-const addTotalSums = (orders) => {
-  const totalSums = [];
-  return orders.map((order, idx) => {
-    const amount = order[2];
-    if (typeof order[3] !== "undefined") {
-      return order;
-    } else {
-      const updatedLevel = [...order];
-      const totalSum = idx === 0 ? amount : amount + totalSums[idx - 1];
-      updatedLevel[3] = totalSum;
-      totalSums.push(totalSum);
-      return updatedLevel;
-    }
-  });
-};
+const addTotalSums = (orders) =>
+  orders.reduce((result, [price, count, amount]) => {
+    const totalSum = result.length
+      ? result[result.length - 1][3] + amount
+      : amount;
+    result.push([price, count, amount, totalSum]);
+    return result;
+  }, []);
 
-const addDepths = (orders, maxTotal) => {
-  return orders.map((order) => {
-    if (typeof order[4] !== "undefined") {
-      return order;
-    } else {
-      const calculatedTotal = order[2];
-      const depth = calculatedTotal / maxTotal;
-      const updatedOrder = [...order];
-      updatedOrder[4] = depth;
-      return updatedOrder;
-    }
-  });
-};
-
-const getMaxTotalSum = (orders) => {
-  const totalSums = orders.map((order) => order[2]);
-  return Math.max.apply(Math, totalSums);
-};
+// Redux Toolkit's createReducer API uses Immer internally automatically.
+// createSlice uses createReducer inside, so it's also safe to "mutate" state,
+// this even applies if the case reducer functions are defined outside of the createSlice/createReducer call.
 
 export const orderbookSlice = createSlice({
   name: "orderbook",
   initialState,
   reducers: {
     addBids: (state, { payload }) => {
-      const updatedBids = addTotalSums(
-        applyDeltas(current(state).rawBids, payload)
+      const updatedBids = applyDeltas(
+        current(state).rawBids,
+        addTotalSums(payload),
+        true
       );
-
-      state.maxTotalBids = getMaxTotalSum(updatedBids);
-      state.bids = addDepths(updatedBids, current(state).maxTotalBids);
+      state.rawBids = updatedBids;
+      state.bids = updatedBids;
     },
-    addAsks: (state, { payload }) => {
-      const updatedAsks = addTotalSums(
-        applyDeltas(current(state).rawAsks, payload)
-      );
-
-      state.maxTotalAsks = getMaxTotalSum(updatedAsks);
-      state.asks = addDepths(updatedAsks, current(state).maxTotalAsks);
+    addAsks: {
+      reducer: (state, { payload }) => {
+        const updatedAsks = applyDeltas(
+          current(state).rawAsks,
+          addTotalSums(payload),
+          false
+        );
+        state.rawAsks = updatedAsks;
+        state.asks = updatedAsks;
+      },
+      prepare: (ask) => {
+        const abs = ask.map(([price, count, amount]) => [
+          price,
+          count,
+          Math.abs(amount),
+        ]);
+        return { payload: abs };
+      },
+    },
+    addSnapshot: (state, { payload }) => {
+      payload.forEach(([price, count, amount]) => {
+        if (amount < 0) {
+          state.rawAsks.push([price, count, Math.abs(amount)]);
+        } else state.rawBids.push([price, count, amount]);
+      });
     },
   },
 });
 
-export const { addBids, addAsks } = orderbookSlice.actions;
+export const { addBids, addAsks, addSnapshot } = orderbookSlice.actions;
 
 export const selectBids = (state) => state.orderbook.bids;
 export const selectAsks = (state) => state.orderbook.asks;

@@ -1,6 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { WSS_URL, PRICE_LEVELS } from "../../config/constant";
+import { WSS_URL } from "../../config/constant";
 import { formatNumber, formatPrice } from "../../helpers";
 import OrderRow from "../OrderRow/OrderRow";
 import Chart from "../Chart/Chart";
@@ -8,6 +8,7 @@ import Chart from "../Chart/Chart";
 import {
   addAsks,
   addBids,
+  addSnapshot,
   selectAsks,
   selectBids,
 } from "../../silce/orderbookSlice";
@@ -20,86 +21,70 @@ import styles from "./Widget.module.scss";
 
 const switchOrder = true;
 
-let currentBids = [];
-let currentAsks = [];
+let subscribeMessage = JSON.stringify({
+  event: "subscribe",
+  channel: "book",
+  symbol: "tBTCUSD",
+});
 
-let respBids = [];
-let respAsks = [];
+let wss;
 
 const Widget = () => {
+  // Retrieving data from Store
   const bids = useSelector(selectBids);
   const asks = useSelector(selectAsks);
+
   const dispatch = useDispatch();
 
+  const websocket = useMemo(() => {
+    if (!wss) {
+      wss = new WebSocket(WSS_URL);
+    }
+  }, []);
+
   useEffect(() => {
-    const wss = new WebSocket(WSS_URL);
+    wss.onopen = () => {
+      wss.send(subscribeMessage);
+    };
 
     wss.onmessage = (msg) => {
-      if (msg.event) return;
-      if (msg[1] === "hb") return;
+      if (msg.event || msg[1] === "hb") return;
 
       const parsed = JSON.parse(msg.data);
+      const data = parsed[1];
 
-      restructure(parsed);
-    };
-    let subscribe = JSON.stringify({
-      event: "subscribe",
-      channel: "book",
-      symbol: "tBTCUSD",
-    });
-
-    wss.onopen = () => {
-      wss.send(subscribe);
-    };
-
-    const restructure = (response) => {
-      if (Array.isArray(response) && response[1].length > 3) {
-        response[1].forEach((item) => {
-          if (Math.sign(item[2]) === -1 && item[2] !== -1) {
-            const abs = [item[0], item[1], Math.abs(item[2])];
-            respAsks.push(abs);
-          } else if (item[2] !== 1) {
-            respBids.push(item);
-          }
-        });
-      }
-
-      if (respBids.length > 0) {
-        currentBids = [...currentBids, ...respBids];
-        if (currentBids.length > PRICE_LEVELS) {
-          dispatch(addBids(currentBids));
-          currentBids = [];
-          currentBids.length = 0;
-        }
-      }
-      if (respAsks.length >= 0) {
-        currentAsks = [...currentAsks, ...respAsks];
-
-        if (currentAsks.length > PRICE_LEVELS) {
-          dispatch(addAsks(currentAsks));
-          currentAsks = [];
-          currentAsks.length = 0;
-        }
+      if (Array.isArray(data) && data.length > 3) {
+        // receiving the snapshot Arr(50) to create the initial book structure
+        dispatch(addSnapshot(data));
+      } else if (Array.isArray(data) && data.length === 3) {
+        // receiving every new single level
+        manageData(data);
       }
     };
-  }, [dispatch]);
+
+    const manageData = (data) => {
+      if (data[2] < 0 && data.length > 0) {
+        dispatch(addAsks([data]));
+      } else if (data[2] > 0 && data.length > 0) {
+        dispatch(addBids([data]));
+      }
+    };
+  }, [dispatch, websocket]);
 
   const buildPriceLevels = (levels, switchOrder) => {
-    return levels.map((level, idx) => {
-      const amount = formatNumber(level[2]);
-      const total = formatNumber(level[3]);
-      const price = formatPrice(level[0]);
-      const count = level[1];
-
+    return levels.map(([price, count, amount, total], idx) => {
+      const formattedAmount = formatNumber(amount);
+      const formattedTotal = formatNumber(total);
+      const formattedPrice = formatPrice(price);
       return (
-        <div key={total + idx}>
-          <Chart amount={amount} total={total} switchOrder={switchOrder} />
+        <div key={idx}>
+          <Chart total={total} switchOrder={switchOrder} />
           <OrderRow
-            key={amount + idx}
+            key={idx}
             count={count}
-            total={total}
-            amount={amount}
-            price={price}
+            total={formattedTotal}
+            amount={formattedAmount}
+            price={formattedPrice}
             switchOrder={switchOrder}
           />
         </div>
@@ -116,7 +101,7 @@ const Widget = () => {
           <div className={styles.OrderContainer}>
             <div className={styles.TableContent}>
               <div className={styles.TitleHeader}>
-                <span>Counts</span>
+                <span>Count</span>
                 <span className={styles.AlignRight}>Amount</span>
                 <span className={styles.AlignRight}>Total</span>
                 <span>Price</span>
@@ -129,7 +114,7 @@ const Widget = () => {
                 <span>Price</span>
                 <span className={styles.AlignRight}>Total</span>
                 <span className={styles.AlignRight}>Amount</span>
-                <span>Counts </span>
+                <span>Count</span>
               </div>
               <div>{buildPriceLevels(asks)}</div>
             </div>

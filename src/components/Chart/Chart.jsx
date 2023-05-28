@@ -5,7 +5,7 @@ const Chart = ({ total, switchOrder }) => {
       style={{
         backgroundColor: `${switchOrder ? "#205c4e" : "#813d3a"}`,
         height: "1.250em",
-        width: `${total}%`,
+        width: `${total > 100 ? 100 : total}%`,
         position: "relative",
         top: 20,
         left: `${switchOrder ? `${100 - total}%` : 0}`,
