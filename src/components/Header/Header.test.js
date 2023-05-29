@@ -1,9 +1,14 @@
 import { render, screen } from "@testing-library/react";
-
 import Header from "./Header";
 
-test("renders header component with text", () => {
-  render(<Header />);
-  const txtElement = screen.getByText(/Order Book/i);
-  expect(txtElement).toBeInTheDocument();
+describe("Header tests", () => {
+  it("renders the title and currency correctly", () => {
+    render(<Header />);
+
+    const titleElement = screen.getByText(/Order Book/i);
+    const currencyElement = screen.getByText(/BTC\/USD/i);
+
+    expect(titleElement).toBeInTheDocument();
+    expect(currencyElement).toBeInTheDocument();
+  });
 });

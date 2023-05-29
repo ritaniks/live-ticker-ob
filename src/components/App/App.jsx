@@ -3,7 +3,7 @@ import styles from "./App.module.scss";
 
 function App() {
   return (
-    <div className={styles.Body}>
+    <div className={styles.Body} data-testid="app-component">
       <Widget />
     </div>
   );

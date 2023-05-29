@@ -93,7 +93,7 @@ const Widget = () => {
   };
 
   return (
-    <div className={styles.Wrapper}>
+    <div className={styles.Wrapper} data-testid="widget-component">
       <Header />
 
       <>
@@ -120,7 +120,9 @@ const Widget = () => {
             </div>
           </div>
         ) : (
-          <Loader />
+          <div data-testid="loader">
+            <Loader />
+          </div>
         )}
       </>
     </div>

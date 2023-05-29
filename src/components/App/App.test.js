@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { Provider } from "react-redux";
 import configureStore from "redux-mock-store";
 
@@ -10,18 +10,21 @@ const initialState = {
   orderbook: {
     rawBids: [],
     bids: [],
-    maxTotalBids: 0,
     rawAsks: [],
     asks: [],
-    maxTotalAsks: 0,
   },
 };
 
-test("renders App", () => {
-  const store = mockStore(initialState);
-  render(
-    <Provider store={store}>
-      <App />
-    </Provider>
-  );
+describe("App test", () => {
+  it("renders the App component", () => {
+    const store = mockStore(initialState);
+    render(
+      <Provider store={store}>
+        <App />
+      </Provider>
+    );
+    const appComponent = screen.getByTestId("app-component");
+
+    expect(appComponent).toBeInTheDocument();
+  });
 });
